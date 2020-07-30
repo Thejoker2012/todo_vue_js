@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todos</title>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
+      integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk"
+      crossorigin="anonymous"
+    />
+  </head>
+
+  <body>
+    <div id="app">
+      <div class="container">
+        <h1>{{titulo}}</h1>
+
+        <div class="card" v-if="changeUpdate">
+          <div class="card-block p-4">
+            <div class="form-group">
+              <label for="todo.form">Título:</label>
+              <input type="text" class="form-control" v-model="todo.title" />
+
+              <label for="">Status da tarefa:</label> <br />
+              <input type="radio" value="true" v-model="todo.completed" />
+              Finalizado
+              <input type="radio" value="false" v-model="todo.completed" /> Em
+              execução
+            </div>
+            <button @click.stop.prevent="submitTodo()" class="btn btn-primary">
+              Salvar Todo
+            </button>
+            <button @click.stop.prevent="reset()" class="btn btn-danger">
+              Cancelar
+            </button>
+          </div>
+        </div>
+
+        <div class="card" v-else="!changeUpdate">
+          <div class="card-block p-4">
+            <div class="form-group">
+              <label for="todo.form">Título:</label>
+              <input
+                type="text"
+                class="form-control"
+                v-model="currentTodo.title"
+              />
+
+              <label for="">Status da tarefa:</label> <br />
+              <input
+                type="radio"
+                value="true"
+                v-model="currentTodo.completed"
+              />
+              Finalizado
+              <input
+                type="radio"
+                value="false"
+                v-model="currentTodo.completed"
+              />
+              Em execução
+            </div>
+            <button @click.stop.prevent=" updateTodo()" class="btn btn-primary">
+              Editar Todo
+            </button>
+            <button @click.stop.prevent="reset()" class="btn btn-danger">
+              Cancelar
+            </button>
+          </div>
+        </div>
+
+        <br />
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Title</th>
+              <th scope="col">Status</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(todo,index) in todos">
+              <td>{{todo.title}}</td>
+              <td>
+                {{ todo.complete === true ? 'Finalizado' : 'Em execução'}}
+              </td>
+              <td>
+                <button
+                  @click.stop.prevent="selectTodo(todo);"
+                  class="btn btn-success"
+                >
+                  Editar
+                </button>
+                <button
+                  @click.stop.prevent="selectTodo(todo); deleteTodo()"
+                  class="btn btn-danger"
+                >
+                  Excluir
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/vue"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-resource@1.5.1"></script>
+    <script>
+      var app = new Vue({
+        el: "#app",
+
+        //mixins: [mixin],
+
+        data: {
+          titulo: "Todos",
+          todo: {
+            title: "",
+            completed: "",
+          },
+          todos: [],
+          currentTodo: {},
+          labelButton: "",
+          changeUpdate: true,
+        },
+        methods: {
+          getTodos() {
+            this.$http
+              .get("http://localhost:1337/todos")
+              .then((response) => {
+                console.log(response.data);
+                this.todos = response.data;
+              })
+              .catch((error) => {
+                console.log(error);
+              });
+          },
+          submitTodo() {
+            const data = this.todo;
+
+            this.$http
+              .post("http://localhost:1337/todos", data)
+              .then((response) => {
+                this.getTodos();
+                this.reset();
+              })
+              .catch((error) => {
+                console.log(error);
+              });
+          },
+
+          updateTodo() {
+            const todoUpd = this.currentTodo;
+            this.$http
+              .put(`http://localhost:1337/todos/${todoUpd.id}`, todoUpd)
+              .then(() => {
+                this.getTodos();
+                console.log("Tarefa atualizada com sucesso!");
+              })
+              .catch((error) => {
+                console.log(error);
+              });
+          },
+
+          deleteTodo() {
+            const { id } = this.currentTodo;
+            const confirmExlusion = confirm("Are you sure you want to delete");
+            if (confirmExlusion) {
+              this.$http
+                .delete(`http://localhost:1337/todos/${id}`)
+                .then(() => {
+                  this.getTodos();
+                  console.log("Tarefa excluida com sucesso!");
+                })
+                .catch((error) => {
+                  console.log(error);
+                });
+            }
+            this.reset();
+          },
+          selectTodo(todo) {
+            this.changeUpdate = false;
+            this.currentTodo = todo;
+          },
+
+          reset() {
+            console.log(this.todo);
+            this.todo.id = "";
+            this.todo.title = "";
+            this.todo.completed = "";
+            this.currentTodo = "";
+            this.changeUpdate = true;
+          },
+        },
+
+        mounted() {
+          this.getTodos();
+        },
+      });
+    </script>
+    <script
+      src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
+      integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+      integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"
+      integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>
